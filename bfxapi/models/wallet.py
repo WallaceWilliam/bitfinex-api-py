@@ -9,12 +9,17 @@ class Wallet:
     currency
     """
 
-    def __init__(self, wType, currency, balance, unsettled_interest):
-        self.type = wType
-        self.currency = currency
-        self.balance = balance
-        self.unsettled_interest = unsettled_interest
-        self.key = "{}_{}".format(wType, currency)
+#    def __init__(self, wType, currency, balance, unsettled_interest):
+    def __init__(self, data):
+# https://docs.bitfinex.com/reference#ws-auth-wallets
+        self.type = data[0] #wType
+        self.currency = data[1] #currency
+        self.balance = data[2] #balance
+        self.unsettled_interest = data[3] #unsettled_interest
+        self.balance_avail = data[4] #BALANCE_AVAILABLE
+        self.description = data[5] #DESCRIPTION
+        self.meta = data[6] #META
+        self.key = "{}_{}".format(self.type, self.currency)
 
     def set_balance(self, data):
         """
@@ -29,5 +34,5 @@ class Wallet:
         self.unsettled_interest = data
 
     def __str__(self):
-        return "Wallet <'{}_{}' balance='{}' unsettled='{}'>".format(
-            self.type, self.currency, self.balance, self.unsettled_interest)
+        return "Wallet <'{}_{}' balance='{}' balance_avail='{}' unsettled='{}' meta={}>".format(
+            self.type, self.currency, self.balance, self.balance_avail, self.unsettled_interest, self.meta)

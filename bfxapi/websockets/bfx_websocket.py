@@ -510,14 +510,14 @@ class BfxWebsocket(GenericWebsocket):
             if socket.isConnected:
                 await socket.send(json.dumps(payload))
 
-    async def subscribe_order_book(self, symbol):
+    async def subscribe_order_book(self, symbol, **kwargs):
         """
         Subscribe to an orderbook data feed
 
         # Attributes
         @param symbol: the trading symbol i.e 'tBTCUSD'
         """
-        return await self.subscribe('book', symbol)
+        return await self.subscribe('book', symbol, **kwargs)
 
     async def subscribe_candles(self, symbol, timeframe):
         """
