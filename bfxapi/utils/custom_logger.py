@@ -9,16 +9,28 @@ COLOR_SEQ = "\033[1;%dm"
 BOLD_SEQ = "\033[1m"
 UNDERLINE_SEQ = "\033[04m"
 
-YELLOW = '\033[93m'
-WHITE = '\33[37m'
-BLUE = '\033[34m'
-LIGHT_BLUE = '\033[94m'
-RED = '\033[91m'
-GREY = '\33[90m'
+#GREEN = '\033[32m'
+#YELLOW = '\033[93m'
+#WHITE = '\33[37m'
+#BLUE = '\033[34m'
+#LIGHT_BLUE = '\033[94m'
+#RED = '\033[91m'
+#GREY = '\33[90m'
+
+RED  = '\033[31m' # red
+GREEN  = '\033[32m' # green
+YELLOW  = '\033[33m' # orange
+BLUE  = '\033[34m' # blue
+LIGHT_BLUE = '\033[1;34m'
+PURPLE  = '\033[35m' # purp
+CYAN  = '\033[36m' # cyan
+RGEY = '\033[37m' # gray
+WHITE = '\033[1;37m' # gray
+CCC = '\033[1;36m'
 
 KEYWORD_COLORS = {
     'WARNING': YELLOW,
-    'INFO': LIGHT_BLUE,
+    'INFO': GREEN,
     'DEBUG': WHITE,
     'CRITICAL': YELLOW,
     'ERROR': RED,
@@ -60,9 +72,9 @@ class Formatter(logging.Formatter):
     """
     levelname = record.levelname
     if self.use_color and levelname in KEYWORD_COLORS:
-        levelname_color = KEYWORD_COLORS[levelname] + levelname + RESET_SEQ
+        levelname_color = KEYWORD_COLORS[levelname] + levelname.ljust(8) + RESET_SEQ
         record.levelname = levelname_color
-    record.name = GREY + record.name + RESET_SEQ
+#    record.name = GREY + record.name + RESET_SEQ
     return logging.Formatter.format(self, record)
 
 class CustomLogger(logging.Logger):
@@ -70,7 +82,9 @@ class CustomLogger(logging.Logger):
     This adds extra logging functions such as logger.trade and also
     sets the logger to use the custom formatter
     '''
-    FORMAT = "[$BOLD%(name)s$RESET] [%(levelname)s] %(message)s"
+#_fmt=G('%(asctime)-15s')+' %(relativeCreated)6d %(levelname)-8s %(threadName)s.%(name)s.%(funcName)s(%(lineno)d):%(message)s'
+#    FORMAT = "[$BOLD%(name)s$RESET] [%(levelname)s] %(message)s"
+    FORMAT = CCC+'%(asctime)-15s'+RESET_SEQ+' %(relativeCreated)6d %(levelname)-8s %(threadName)s.%(name)s.%(funcName)s(%(lineno)d):%(message)s'
     COLOR_FORMAT = formatter_message(FORMAT, True)
     TRADE = 50
 

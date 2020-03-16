@@ -38,6 +38,7 @@ class BfxRest:
         @return reponse
         """
         url = '{}/{}{}'.format(self.host, endpoint, params)
+        self.logger.info("Fetch url {}".format(url))
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 text = await resp.text()
@@ -70,6 +71,31 @@ class BfxRest:
     ##################################################
     #                  Public Data                   #
     ##################################################
+
+    async def get_conf(self, action, object=None, detail=None):
+        """
+        https://api-pub.bitfinex.com/v2/conf/pub:Action:Object:Detail
+        Get all of the public candles between the start and end period.
+
+        # Attributes
+        @param action {'map', 'list', 'info', 'fees'}
+        @param object map -> 'currency', 'tx' 
+                     list -> 'currency', 'pair', 'competitions'
+                     info -> 'pair', 'tx'
+                     fees -> None
+        @param detail map:currency -> 'sym', 'label', 'unit', 'undl', 'pool', 'explorer', 
+                            map:tx -> 'method'
+                         list:pair -> 'exchange', 'margin'
+                           info:tx -> 'status'
+                              else -> None
+        @return Array [ ]
+        """
+        object=":{}".format(object) if object != None else ""
+        detail=":{}".format(detail) if detail != None else ""
+        endpoint = "conf/pub:{}{}{}".format(action, object, detail)
+        params = ""
+        conf = await self.fetch(endpoint, params=params)
+        return conf
 
     async def get_seed_candles(self, symbol, tf='1m'):
         """

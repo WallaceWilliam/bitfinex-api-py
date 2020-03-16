@@ -7,7 +7,7 @@ import websockets
 import socket
 import json
 import time
-from threading import Thread, Lock
+from threading import Thread, Lock, Event
 
 from pyee import EventEmitter
 from ..utils.custom_logger import CustomLogger
@@ -55,18 +55,21 @@ class Socket():
         with self.lock:
             await self.ws.send(data)
 
+event_worker = Event()
+
 def _start_event_worker():
     async def event_sleep_process():
         """
         sleeping process for event emitter to schedule on
         """
-        while True:
-            await asyncio.sleep(00.001)
+        while event_worker.is_set():
+            await asyncio.sleep(0.001)
     def start_loop(loop):
         asyncio.set_event_loop(loop)
         loop.run_until_complete(event_sleep_process())
     event_loop = asyncio.new_event_loop()
-    worker = Thread(target=start_loop, args=(event_loop,))
+    worker = Thread(name="event_worker", target=start_loop, args=(event_loop,))
+    worker.daemon = True
     worker.start()
     ee = EventEmitter(scheduler=asyncio.ensure_future, loop=event_loop)
     return ee
@@ -87,8 +90,10 @@ class GenericWebsocket:
         self.attempt_retry = True
         self.sockets = {}
         # start seperate process for the even emitter
+        event_worker.set()
         create_ee = create_event_emitter or _start_event_worker
         self.events = create_ee()
+        self.execute = Event()
 
     def run(self):
         """
@@ -96,6 +101,19 @@ class GenericWebsocket:
         thread and connection.
         """
         self._start_new_socket()
+
+    def stop(self):
+        self.execute.clear()
+        event_worker.clear()
+        for _,socket in self.sockets.items():
+            socket.set_disconnected()
+            if(socket.ws): asyncio.ensure_future(socket.ws.close_connection())
+#            self.worker_new_sockets[sId].cancel()
+#            socket.ws.fail_connection()
+#            asyncio.ensure_future(socket.ws.close())
+#            asyncio.ensure_future(self.sockets[sId].ws.ping())
+#            loop.run_until_complete(self.sockets[sId].ws.close_connection())
+        self.logger.info("GenericWebsocket stop")
 
     def get_task_executable(self):
         """
@@ -110,8 +128,9 @@ class GenericWebsocket:
             asyncio.set_event_loop(loop)
             loop.run_until_complete(self._run_socket())
         worker_loop = asyncio.new_event_loop()
-        worker = Thread(target=start_loop, args=(worker_loop,))
-        worker.start()
+        worker_new_socket = Thread(name="worker_new_socket",target=start_loop, args=(worker_loop,))
+        worker_new_socket.daemon = True
+        worker_new_socket.start()
         return socketId
 
     def _wait_for_socket(self, socket_id):
@@ -139,19 +158,21 @@ class GenericWebsocket:
         sId =  len(self.sockets)
         s = Socket(sId)
         self.sockets[sId] = s
-        while retries < self.max_retries and self.attempt_retry:
+        self.execute.set()
+        while retries < self.max_retries and self.attempt_retry and self.execute.is_set():
             try:
                 async with websockets.connect(self.host) as websocket:
                     self.sockets[sId].set_websocket(websocket)
                     self.sockets[sId].set_connected()
                     self.logger.info("Websocket connected to {}".format(self.host))
                     retries = 0
-                    while True:
+                    while self.execute.is_set():
                         # optimization - wait 0 seconds to force the async queue
                         # to be cleared before continuing
-                        await asyncio.sleep(0)
+                        await asyncio.sleep(0.001)
                         message = await websocket.recv()
                         await self.on_message(sId, message)
+                    self.logger.info("Websocket disconnect")
             except (ConnectionClosed, socket.error) as e:
                 self.sockets[sId].set_disconnected()
                 if self.sockets[sId].isAuthenticated:
